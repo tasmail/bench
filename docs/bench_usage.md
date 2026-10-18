@@ -54,6 +54,24 @@ Options:
 
 
 
+## Native nginx server policy includes
+
+Set `nginx_server_include` in `sites/common_site_config.json` to an absolute,
+literal `.conf` path, for example `/etc/nginx/http-security-edge-server.conf`.
+It is disabled when absent or empty. `bench setup nginx` includes that file in
+all generated server blocks, including HTTP-to-HTTPS redirects and appended
+bench-manager servers. The setting survives regeneration and applies to new
+sites without editing generated files.
+
+Stage and validate the server-scope policy file before enabling the setting.
+Expressions, glob patterns, relative paths and directive injection are rejected
+before an existing generated file is overwritten. The include is intentionally
+required: deleting a configured policy file causes `nginx -t` to fail instead
+of silently dropping the policy. Missing-file checks belong to nginx on the
+serving host, not to template rendering. Restrict policy actions by server port
+inside the policy when internal/custom HTTP ports should remain unaffected.
+Removing the setting restores default rendering; it does not reload nginx.
+
 ## bench and sudo
 
 Some bench commands may require sudo, such as some `setup` commands and everything else under the `install` commands group. For these commands, you may not be asked for your root password if sudoers setup has been done. The security implications, well we'll talk about those soon.
