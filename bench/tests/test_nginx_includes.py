@@ -1,5 +1,6 @@
 """Offline coverage of native nginx regeneration; no services or listeners."""
 
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -49,7 +50,7 @@ class TestNginxServerInclude(unittest.TestCase):
 	def test_include_survives_regeneration_and_new_sites(self):
 		for _ in range(2):
 			text = self.generate()
-			self.assertEqual(text.count("server {"), 6)
+			self.assertEqual(len(re.findall(r"(?m)^\s*server\s*\{", text)), 6)
 			self.assertEqual(
 				text.count("include /etc/nginx/http-security-edge-server.conf;"), 6
 			)
