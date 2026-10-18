@@ -2,6 +2,7 @@
 import hashlib
 import os
 import random
+import re
 import string
 
 # imports - third party imports
@@ -12,6 +13,20 @@ import bench
 import bench.config
 from bench.bench import Bench
 from bench.utils import get_bench_name
+
+
+def get_nginx_server_include(config):
+	"""Return an optional literal path, never an nginx expression or glob."""
+	path = config.get("nginx_server_include")
+	if path is None or path == "":
+		return None
+	if (
+		not isinstance(path, str)
+		or not re.fullmatch(r"/[A-Za-z0-9_./-]+\.conf", path)
+		or ".." in path.split("/")
+	):
+		raise ValueError("nginx_server_include must be an absolute literal .conf path")
+	return path
 
 
 def make_nginx_conf(bench_path, yes=False, logging=None, log_format=None):
@@ -41,9 +56,12 @@ def make_nginx_conf(bench_path, yes=False, logging=None, log_format=None):
 		"socketio_port": config.get("socketio_port"),
 		"bench_name": bench_name,
 		"error_pages": get_error_pages(),
+		"nginx_server_include": get_nginx_server_include(config),
 		"allow_rate_limiting": allow_rate_limiting,
 		# for nginx map variable
-		"random_string": "".join(random.choice(string.ascii_lowercase) for i in range(7)),
+		"random_string": "".join(
+			random.choice(string.ascii_lowercase) for i in range(7)
+		),
 	}
 
 	if logging and logging != "none":
@@ -87,6 +105,7 @@ def make_bench_manager_nginx_conf(bench_path, yes=False, port=23624, domain=None
 		"socketio_port": config.get("socketio_port"),
 		"bench_name": bench_name,
 		"error_pages": get_error_pages(),
+		"nginx_server_include": get_nginx_server_include(config),
 		"ssl_certificate": site_config.get("ssl_certificate"),
 		"ssl_certificate_key": site_config.get("ssl_certificate_key"),
 	}
@@ -161,7 +180,10 @@ def prepare_sites(config, bench_path):
 				while site["port"] in ports_in_use:
 					site["port"] += 1
 
-			if site["port"] in ports_in_use and not site["name"] in ports_in_use[site["port"]]:
+			if (
+				site["port"] in ports_in_use
+				and not site["name"] in ports_in_use[site["port"]]
+			):
 				shared_port_exception_found = True
 				ports_in_use[site["port"]].append(site["name"])
 			else:
